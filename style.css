@@ -491,3 +491,8 @@ button {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+.onedrive-signin {
+  margin-top: 2px;
+  font-size: 13px;
+}

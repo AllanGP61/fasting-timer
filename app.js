@@ -398,6 +398,7 @@ async function openAskSheet({ title, message, yesLabel, noLabel }) {
 // ---------- OneDrive connection (the sign-in itself lives in onedrive.js) ----------
 
 let onedriveNotice = '';
+let onedriveMessage = '';
 
 const inHomeScreenApp = () => window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 
@@ -427,9 +428,12 @@ function renderOneDrive() {
   const status = oneDriveSyncStatus();
   const where = inHomeScreenApp() ? 'home-screen app' : 'Safari tab';
   const action = $('onedrive-action');
-  const note = syncNote(status);
+  const note = [syncNote(status), onedriveMessage].filter(Boolean).join(' ');
   $('onedrive-note').hidden = !note;
   $('onedrive-note').textContent = note;
+  $('onedrive-signin').hidden = !connection;
+  if (connection) $('onedrive-signin').textContent = `Signed in ${describeWhen(connection.signedInAt)}`;
+  $('onedrive-refresh').hidden = !connection || status.needsReconnect;
 
   if (status.needsReconnect) {
     $('onedrive-status').textContent = 'OneDrive: sign-in expired';
@@ -461,6 +465,7 @@ async function onOneDriveAction() {
     if (!disconnect) return;
     disconnectOneDrive();
     onedriveNotice = '';
+    onedriveMessage = '';
     renderOneDrive();
     return;
   }
@@ -478,9 +483,19 @@ async function onOneDriveAction() {
 async function initOneDrive() {
   const result = await handleAuthRedirect();
   if (result.handled) {
-    onedriveNotice = result.error ? `sign-in failed. ${result.error}` : '';
-    if (result.connected) markLogChanged();
-    showView('log');
+    if (!result.silent) {
+      onedriveNotice = result.error ? `sign-in failed. ${result.error}` : '';
+      if (result.connected) markLogChanged();
+      showView('log');
+    } else if (result.manual) {
+      onedriveMessage = result.connected
+        ? 'Sign-in refreshed.'
+        : "Couldn't refresh quietly. Use Reconnect if uploads stop.";
+      showView('log');
+    } else if (result.error) {
+      // A background renewal that didn't work is only shown if the sign-in later actually expires.
+      console.warn('Quiet OneDrive sign-in renewal did not work:', result.error);
+    }
   }
   renderOneDrive();
 }
@@ -602,6 +617,11 @@ $('target-plus').addEventListener('click', () => setTarget(targetHours + 1));
 $('export-csv').addEventListener('click', exportCsv);
 $('onedrive-action').addEventListener('click', onOneDriveAction);
 $('onedrive-alert').addEventListener('click', () => showView('log'));
+$('onedrive-refresh').addEventListener('click', () => {
+  onedriveMessage = 'Refreshing…';
+  renderOneDrive();
+  connectOneDrive({ silent: true, manual: true });
+});
 onedriveHooks.changed = renderOneDrive;
 $('tab-timer').addEventListener('click', () => showView('timer'));
 $('tab-log').addEventListener('click', () => showView('log'));
@@ -615,7 +635,11 @@ $('log-list').addEventListener('click', (event) => {
 function onAppVisible() {
   render();
   checkForgottenStop();
-  syncOneDrive();
+  // Renew an aging OneDrive sign-in first (it leaves the page briefly); otherwise catch up on any waiting upload.
+  const renewing = sheet.open ? Promise.resolve(false) : maybeQuietSignIn();
+  renewing.then((started) => {
+    if (!started) syncOneDrive();
+  });
 }
 window.addEventListener('online', syncOneDrive);
 document.addEventListener('visibilitychange', () => {
