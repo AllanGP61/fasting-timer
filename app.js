@@ -36,13 +36,25 @@ function toLocalInputValue(date) {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function formatDayTime(date) {
-  return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}, ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+const formatDay = (date) => `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+const formatClock = (date) => `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+const formatDayTime = (date) => `${formatDay(date)}, ${formatClock(date)}`;
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function formatMinutes(totalMinutes) {
+  return `${Math.floor(totalMinutes / 60)}h ${pad2(totalMinutes % 60)}m`;
 }
 
 function formatElapsed(ms) {
-  const totalMinutes = Math.floor(Math.max(0, ms) / MINUTE_MS);
-  return `${Math.floor(totalMinutes / 60)}h ${pad2(totalMinutes % 60)}m`;
+  return formatMinutes(Math.floor(Math.max(0, ms) / MINUTE_MS));
+}
+
+// Whole minutes between a completed fast's start and end (both are whole minutes already).
+function durationMinutes(fast) {
+  return Math.floor((Date.parse(fast.endISO) - Date.parse(fast.startISO)) / MINUTE_MS);
 }
 
 // Returns an error message, or null when the times are acceptable. `end` may be null (running fast).
@@ -146,6 +158,53 @@ function render() {
   $('target-hours').textContent = targetHours;
   $('target-minus').disabled = targetHours <= MIN_TARGET_HOURS;
   $('target-plus').disabled = targetHours >= MAX_TARGET_HOURS;
+}
+
+// ---------- Log ----------
+
+function makeEl(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function makeLogRow(fast) {
+  const start = new Date(fast.startISO);
+  const end = new Date(fast.endISO);
+  const minutes = durationMinutes(fast);
+  const targetMet = minutes >= fast.targetHours * 60;
+  const times = isSameDay(start, end)
+    ? `${formatClock(start)} → ${formatClock(end)}`
+    : `${formatDay(start)} ${formatClock(start)} → ${formatClock(end)}`;
+
+  const head = makeEl('div', 'log-head');
+  head.append(makeEl('span', 'log-date', formatDay(end)), makeEl('span', targetMet ? 'log-duration met' : 'log-duration', formatMinutes(minutes)));
+  const detail = makeEl('div', 'log-detail');
+  detail.append(makeEl('span', '', times), makeEl('span', '', `Target ${fast.targetHours}h`));
+
+  const row = makeEl('li', 'log-row');
+  row.append(head, detail);
+  return row;
+}
+
+// Newest first. A fast is filed under the date it ended.
+function renderLog() {
+  const fasts = loadFasts()
+    .slice()
+    .sort((a, b) => Date.parse(b.endISO) - Date.parse(a.endISO) || Date.parse(b.startISO) - Date.parse(a.startISO));
+  $('log-empty').hidden = fasts.length > 0;
+  $('log-count').textContent = fasts.length === 0 ? '' : fasts.length === 1 ? '1 fast' : `${fasts.length} fasts`;
+  $('log-list').replaceChildren(...fasts.map(makeLogRow));
+}
+
+function showView(name) {
+  for (const view of ['timer', 'log']) {
+    $(`view-${view}`).hidden = view !== name;
+    $(`tab-${view}`).setAttribute('aria-selected', String(view === name));
+  }
+  if (name === 'log') renderLog();
+  window.scrollTo(0, 0);
 }
 
 // ---------- Time sheet (Start now / earlier time, Stop now / earlier time, edit) ----------
@@ -255,6 +314,7 @@ async function stopFast() {
   activeFast = null;
   targetHours = DEFAULT_TARGET_HOURS;
   render();
+  renderLog();
 }
 
 async function changeStartTime() {
@@ -283,6 +343,8 @@ $('start-stop').addEventListener('click', () => (activeFast ? stopFast() : start
 $('start-time').addEventListener('click', changeStartTime);
 $('target-minus').addEventListener('click', () => setTarget(targetHours - 1));
 $('target-plus').addEventListener('click', () => setTarget(targetHours + 1));
+$('tab-timer').addEventListener('click', () => showView('timer'));
+$('tab-log').addEventListener('click', () => showView('log'));
 
 // Timers pause while the phone is locked, so redraw as soon as the app is visible again.
 document.addEventListener('visibilitychange', () => {
@@ -291,6 +353,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pageshow', render);
 setInterval(render, TICK_MS);
 render();
+renderLog();
 
 // ---------- Offline support ----------
 

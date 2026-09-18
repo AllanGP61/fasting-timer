@@ -15,36 +15,52 @@
 </head>
 <body>
   <main class="app">
-    <section class="ring-area">
-      <div class="ring-wrap">
-        <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
-          <circle class="ring-track" cx="100" cy="100" r="88"></circle>
-          <circle class="ring-progress" id="ring-progress" cx="100" cy="100" r="88"></circle>
-        </svg>
-        <div class="ring-center" id="ring-center"></div>
-      </div>
-      <div class="readout">
-        <div class="elapsed" id="elapsed">0h 00m</div>
-        <div class="readout-label" id="readout-label">not fasting</div>
-        <button class="link" id="start-time" type="button" disabled></button>
-      </div>
-    </section>
-
-    <section class="controls">
-      <div class="target" role="group" aria-label="Target duration">
-        <button class="step" id="target-minus" type="button" aria-label="Decrease target by one hour">&minus;</button>
-        <div class="target-value">
-          <span class="target-number" id="target-hours">20</span>
-          <span class="target-unit">hour target</span>
+    <div class="view" id="view-timer">
+      <section class="ring-area">
+        <div class="ring-wrap">
+          <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+            <circle class="ring-track" cx="100" cy="100" r="88"></circle>
+            <circle class="ring-progress" id="ring-progress" cx="100" cy="100" r="88"></circle>
+          </svg>
+          <div class="ring-center" id="ring-center"></div>
         </div>
-        <button class="step" id="target-plus" type="button" aria-label="Increase target by one hour">+</button>
-      </div>
-      <button class="primary" id="start-stop" type="button">Start</button>
-    </section>
+        <div class="readout">
+          <div class="elapsed" id="elapsed">0h 00m</div>
+          <div class="readout-label" id="readout-label">not fasting</div>
+          <button class="link" id="start-time" type="button" disabled></button>
+        </div>
+      </section>
+
+      <section class="controls">
+        <div class="target" role="group" aria-label="Target duration">
+          <button class="step" id="target-minus" type="button" aria-label="Decrease target by one hour">&minus;</button>
+          <div class="target-value">
+            <span class="target-number" id="target-hours">20</span>
+            <span class="target-unit">hour target</span>
+          </div>
+          <button class="step" id="target-plus" type="button" aria-label="Increase target by one hour">+</button>
+        </div>
+        <button class="primary" id="start-stop" type="button">Start</button>
+      </section>
+    </div>
+
+    <div class="view" id="view-log" hidden>
+      <header class="log-header">
+        <h1>Fast log</h1>
+        <span class="log-count" id="log-count"></span>
+      </header>
+      <p class="log-empty" id="log-empty">No completed fasts yet. When you stop a fast it appears here.</p>
+      <ul class="log-list" id="log-list"></ul>
+    </div>
 
     <footer class="footer">
-      <span class="build" id="build">build 2</span>
+      <span class="build" id="build">build 3</span>
     </footer>
+
+    <nav class="tabs" aria-label="Views">
+      <button id="tab-timer" type="button" aria-selected="true">Timer</button>
+      <button id="tab-log" type="button" aria-selected="false">Log</button>
+    </nav>
   </main>
 
   <dialog class="sheet" id="sheet" aria-labelledby="sheet-title">
