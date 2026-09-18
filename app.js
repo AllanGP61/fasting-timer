@@ -398,23 +398,40 @@ async function openAskSheet({ title, message, yesLabel, noLabel }) {
 // ---------- OneDrive connection (the sign-in itself lives in onedrive.js) ----------
 
 let onedriveNotice = '';
-let onedriveResult = '';
 
 const inHomeScreenApp = () => window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 
+function describeWhen(timestamp) {
+  const date = new Date(timestamp);
+  return isSameDay(date, new Date()) ? `today ${formatClock(date)}` : formatDayTime(date);
+}
+
+// One line saying where the OneDrive copy has got to.
+function syncNote(status) {
+  if (!status.connected || status.needsReconnect) return '';
+  if (status.uploading) return 'Uploading…';
+  if (status.pending) return status.lastError ? `Waiting to upload. ${status.lastError} Will retry.` : 'Waiting to upload…';
+  return status.lastUploadAt ? `Uploaded ${describeWhen(status.lastUploadAt)}.` : 'Nothing to upload yet.';
+}
+
 function renderOneDrive() {
   const row = $('onedrive-row');
+  const alert = $('onedrive-alert');
   row.hidden = !onedriveConfigured();
-  if (row.hidden) return;
+  if (row.hidden) {
+    alert.hidden = true;
+    return;
+  }
 
   const connection = getOnedriveConnection();
+  const status = oneDriveSyncStatus();
   const where = inHomeScreenApp() ? 'home-screen app' : 'Safari tab';
   const action = $('onedrive-action');
-  const usable = Boolean(connection) && !connection.needsReconnect;
-  $('onedrive-upload').hidden = !usable;
-  $('onedrive-note').hidden = !onedriveResult;
-  $('onedrive-note').textContent = onedriveResult;
-  if (connection && connection.needsReconnect) {
+  const note = syncNote(status);
+  $('onedrive-note').hidden = !note;
+  $('onedrive-note').textContent = note;
+
+  if (status.needsReconnect) {
     $('onedrive-status').textContent = 'OneDrive: sign-in expired';
     action.textContent = 'Reconnect';
     action.dataset.action = 'connect';
@@ -427,6 +444,10 @@ function renderOneDrive() {
     action.textContent = onedriveNotice ? 'Try again' : 'Connect';
     action.dataset.action = 'connect';
   }
+
+  // A problem shows on the Timer tab too, so it isn't missed.
+  alert.hidden = !(status.needsReconnect || (status.connected && status.pending && status.lastError));
+  alert.textContent = status.needsReconnect ? 'OneDrive: sign-in expired. Tap to reconnect.' : 'OneDrive: not uploaded yet. Tap for details.';
 }
 
 async function onOneDriveAction() {
@@ -440,7 +461,6 @@ async function onOneDriveAction() {
     if (!disconnect) return;
     disconnectOneDrive();
     onedriveNotice = '';
-    onedriveResult = '';
     renderOneDrive();
     return;
   }
@@ -454,25 +474,12 @@ async function onOneDriveAction() {
   }
 }
 
-// Temporary test button for build 9: uploads the current log once to the testing folder.
-async function uploadTest() {
-  onedriveResult = 'Uploading…';
-  renderOneDrive();
-  try {
-    const item = await uploadCsvToOneDrive(buildCsvFromLog(loadFasts()));
-    onedriveResult = `Uploaded ${item.name} (${item.size} bytes) to "${ONEDRIVE.uploadFolder}" at ${formatClock(new Date())}.`;
-  } catch (err) {
-    console.error('OneDrive upload failed', err);
-    onedriveResult = `Upload failed (${err.kind || 'error'}): ${err.message}`;
-  }
-  renderOneDrive();
-}
-
 // Runs at load: finishes a sign-in if this page load is Microsoft sending the browser back.
 async function initOneDrive() {
   const result = await handleAuthRedirect();
   if (result.handled) {
     onedriveNotice = result.error ? `sign-in failed. ${result.error}` : '';
+    if (result.connected) markLogChanged();
     showView('log');
   }
   renderOneDrive();
@@ -521,6 +528,7 @@ async function stopFast({ pickTime = false } = {}) {
   targetHours = DEFAULT_TARGET_HOURS;
   render();
   renderLog();
+  markLogChanged();
 }
 
 async function changeStartTime() {
@@ -551,6 +559,7 @@ async function editFast(id) {
         );
   if (!writeJSON(KEYS.fasts, updated)) return;
   renderLog();
+  markLogChanged();
 }
 
 let forgottenPromptOpen = false;
@@ -592,7 +601,8 @@ $('target-minus').addEventListener('click', () => setTarget(targetHours - 1));
 $('target-plus').addEventListener('click', () => setTarget(targetHours + 1));
 $('export-csv').addEventListener('click', exportCsv);
 $('onedrive-action').addEventListener('click', onOneDriveAction);
-$('onedrive-upload').addEventListener('click', uploadTest);
+$('onedrive-alert').addEventListener('click', () => showView('log'));
+onedriveHooks.changed = renderOneDrive;
 $('tab-timer').addEventListener('click', () => showView('timer'));
 $('tab-log').addEventListener('click', () => showView('log'));
 
@@ -605,12 +615,17 @@ $('log-list').addEventListener('click', (event) => {
 function onAppVisible() {
   render();
   checkForgottenStop();
+  syncOneDrive();
 }
+window.addEventListener('online', syncOneDrive);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') onAppVisible();
 });
 window.addEventListener('pageshow', onAppVisible);
-setInterval(render, TICK_MS);
+setInterval(() => {
+  render();
+  syncIfDue();
+}, TICK_MS);
 render();
 renderLog();
 checkForgottenStop();

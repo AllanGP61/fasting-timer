@@ -16,9 +16,11 @@ const ONEDRIVE = {
   pendingSignInKey: 'fastingTimer.onedriveSignIn',
 };
 
-// Tests replace this to capture the sign-in URL instead of leaving the page.
+// Tests replace `navigate` to capture the sign-in URL instead of leaving the page.
+// `changed` is called whenever the upload status changes so the screen can redraw.
 const onedriveHooks = {
   navigate: (url) => location.assign(url),
+  changed: () => {},
 };
 
 function onedriveConfigured() {
@@ -267,4 +269,89 @@ async function uploadCsvToOneDrive(csvText) {
   }
   const item = await response.json().catch(() => ({}));
   return { name: item.name || CSV_FILENAME, size: item.size };
+}
+
+// ---------- Keeping the OneDrive copy up to date ----------
+// Every change to the log bumps `generation`. An upload records the generation it sent, so if the log changed
+// while it was sending, another upload follows straight away and OneDrive always ends with the latest log.
+
+const SYNC_KEY = 'fastingTimer.uploadState';
+const SYNC_RETRY_MS = 60000;
+const syncRuntime = { running: false, uploading: false, lastAttemptAt: 0 };
+
+function readSyncState() {
+  const saved = readOnedriveJSON(SYNC_KEY) || {};
+  return {
+    generation: saved.generation || 0,
+    uploadedGeneration: saved.uploadedGeneration || 0,
+    lastUploadAt: saved.lastUploadAt || null,
+    lastError: saved.lastError || null,
+  };
+}
+
+function writeSyncState(state) {
+  localStorage.setItem(SYNC_KEY, JSON.stringify(state));
+}
+
+function oneDriveSyncStatus() {
+  const connection = getOnedriveConnection();
+  const state = readSyncState();
+  return {
+    connected: Boolean(connection),
+    needsReconnect: Boolean(connection && connection.needsReconnect),
+    pending: state.generation > state.uploadedGeneration,
+    uploading: syncRuntime.uploading,
+    lastUploadAt: state.lastUploadAt,
+    lastError: state.lastError,
+  };
+}
+
+// Call after anything changes the log (stop, edit, delete) and after connecting.
+function markLogChanged() {
+  const state = readSyncState();
+  writeSyncState({ ...state, generation: state.generation + 1 });
+  syncOneDrive();
+}
+
+async function syncOneDrive() {
+  if (syncRuntime.running) return;
+  syncRuntime.running = true;
+  try {
+    for (;;) {
+      const connection = getOnedriveConnection();
+      const state = readSyncState();
+      if (!connection || connection.needsReconnect || state.generation === state.uploadedGeneration) break;
+
+      const fasts = loadFasts();
+      const nothingToSend = fasts.length === 0 && !state.lastUploadAt;
+      syncRuntime.lastAttemptAt = Date.now();
+      syncRuntime.uploading = !nothingToSend;
+      onedriveHooks.changed();
+      try {
+        if (!nothingToSend) await uploadCsvToOneDrive(buildCsvFromLog(fasts));
+        writeSyncState({
+          ...readSyncState(),
+          uploadedGeneration: state.generation,
+          lastUploadAt: nothingToSend ? null : Date.now(),
+          lastError: null,
+        });
+      } catch (err) {
+        console.error('OneDrive upload failed', err);
+        writeSyncState({ ...readSyncState(), lastError: err.message });
+        break;
+      }
+    }
+  } finally {
+    syncRuntime.running = false;
+    syncRuntime.uploading = false;
+    onedriveHooks.changed();
+  }
+}
+
+// Called from the app's regular tick: retry a waiting upload about once a minute.
+function syncIfDue() {
+  const status = oneDriveSyncStatus();
+  if (status.connected && !status.needsReconnect && status.pending && !syncRuntime.running && Date.now() - syncRuntime.lastAttemptAt >= SYNC_RETRY_MS) {
+    syncOneDrive();
+  }
 }
