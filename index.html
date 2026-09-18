@@ -49,12 +49,13 @@
         <h1>Fast log</h1>
         <span class="log-count" id="log-count"></span>
       </header>
+      <p class="log-hint" id="log-hint" hidden>Tap a fast to edit or delete it.</p>
       <p class="log-empty" id="log-empty">No completed fasts yet. When you stop a fast it appears here.</p>
       <ul class="log-list" id="log-list"></ul>
     </div>
 
     <footer class="footer">
-      <span class="build" id="build">build 3</span>
+      <span class="build" id="build">build 4</span>
     </footer>
 
     <nav class="tabs" aria-label="Views">
@@ -76,6 +77,18 @@
         <input type="datetime-local" id="sheet-input" aria-label="Date and time">
         <button class="sheet-btn main" id="sheet-confirm" type="button">Confirm</button>
         <button class="sheet-btn plain" id="sheet-cancel-picker" type="button">Cancel</button>
+      </div>
+      <div class="sheet-view" id="sheet-edit" hidden>
+        <label class="field"><span>Start</span><input type="datetime-local" id="edit-start"></label>
+        <label class="field"><span>End</span><input type="datetime-local" id="edit-end"></label>
+        <button class="sheet-btn main" id="edit-save" type="button">Save</button>
+        <button class="sheet-btn plain" id="edit-cancel" type="button">Cancel</button>
+        <button class="sheet-btn danger" id="edit-delete" type="button">Delete this fast</button>
+      </div>
+      <div class="sheet-view" id="sheet-ask" hidden>
+        <p class="sheet-message" id="ask-message"></p>
+        <button class="sheet-btn main" id="ask-yes" type="button"></button>
+        <button class="sheet-btn plain" id="ask-no" type="button"></button>
       </div>
     </div>
   </dialog>

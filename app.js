@@ -6,6 +6,7 @@ const DEFAULT_TARGET_HOURS = 20;
 const HOUR_MS = 3600000;
 const MINUTE_MS = 60000;
 const TICK_MS = 10000;
+const FORGOTTEN_AFTER_MS = 4 * HOUR_MS;
 
 const KEYS = {
   fasts: 'fastingTimer.fasts',
@@ -183,8 +184,12 @@ function makeLogRow(fast) {
   const detail = makeEl('div', 'log-detail');
   detail.append(makeEl('span', '', times), makeEl('span', '', `Target ${fast.targetHours}h`));
 
+  const button = makeEl('button', 'log-btn');
+  button.type = 'button';
+  button.dataset.id = fast.id;
+  button.append(head, detail);
   const row = makeEl('li', 'log-row');
-  row.append(head, detail);
+  row.append(button);
   return row;
 }
 
@@ -194,6 +199,7 @@ function renderLog() {
     .slice()
     .sort((a, b) => Date.parse(b.endISO) - Date.parse(a.endISO) || Date.parse(b.startISO) - Date.parse(a.startISO));
   $('log-empty').hidden = fasts.length > 0;
+  $('log-hint').hidden = fasts.length === 0;
   $('log-count').textContent = fasts.length === 0 ? '' : fasts.length === 1 ? '1 fast' : `${fasts.length} fasts`;
   $('log-list').replaceChildren(...fasts.map(makeLogRow));
 }
@@ -207,17 +213,23 @@ function showView(name) {
   window.scrollTo(0, 0);
 }
 
-// ---------- Time sheet (Start now / earlier time, Stop now / earlier time, edit) ----------
+// ---------- Sheet (bottom pop-up for time choices, editing and confirmations) ----------
 
 const sheet = $('sheet');
-const sheetError = $('sheet-error');
-const sheetChoice = $('sheet-choice');
-const sheetPicker = $('sheet-picker');
-const sheetInput = $('sheet-input');
+const SHEET_VIEWS = ['choice', 'picker', 'edit', 'ask'];
 
-// Resolves with a whole-minute Date, or null if cancelled.
-// With nowLabel/earlierLabel it opens on a "now or earlier" choice; without them it opens straight on the picker.
-function openTimeSheet({ title, nowLabel, earlierLabel, initial, validate }) {
+function setSheetError(message) {
+  $('sheet-error').textContent = message || '';
+  $('sheet-error').hidden = !message;
+}
+
+function showSheetView(name) {
+  for (const view of SHEET_VIEWS) $(`sheet-${view}`).hidden = view !== name;
+  setSheetError('');
+}
+
+// Opens the sheet and resolves with whatever `finish` is called with, or null if it is dismissed.
+function runSheet(title, setup) {
   return new Promise((resolve) => {
     if (sheet.open) {
       resolve(null);
@@ -227,32 +239,41 @@ function openTimeSheet({ title, nowLabel, earlierLabel, initial, validate }) {
       resolve(value);
       if (sheet.open) sheet.close();
     };
-    const showError = (message) => {
-      sheetError.textContent = message || '';
-      sheetError.hidden = !message;
+    $('sheet-title').textContent = title;
+    setup(finish);
+    sheet.onclick = (event) => {
+      if (event.target === sheet) finish(null);
     };
+    // "cancel" fires only when the user dismisses the sheet (Escape / back gesture). Unlike "close" it is
+    // not triggered by our own sheet.close(), whose late event would otherwise cancel the next sheet.
+    sheet.oncancel = (event) => {
+      event.preventDefault();
+      finish(null);
+    };
+    sheet.showModal();
+  });
+}
+
+const nowLocalInput = () => toLocalInputValue(floorToMinute(new Date()));
+
+// Resolves with a whole-minute Date, or null if cancelled.
+// With nowLabel/earlierLabel it opens on a "now or earlier" choice; without them it opens straight on the picker.
+function openTimeSheet({ title, nowLabel, earlierLabel, initial, validate }) {
+  return runSheet(title, (finish) => {
+    const input = $('sheet-input');
     const commit = (date) => {
       const error = validate(date);
-      if (error) {
-        showError(error);
-        return;
-      }
-      finish(date);
+      if (error) setSheetError(error);
+      else finish(date);
     };
     const showPicker = (date) => {
-      sheetChoice.hidden = true;
-      sheetPicker.hidden = false;
-      sheetInput.max = toLocalInputValue(floorToMinute(new Date()));
-      sheetInput.value = toLocalInputValue(date);
-      showError('');
+      showSheetView('picker');
+      input.max = nowLocalInput();
+      input.value = toLocalInputValue(date);
     };
 
-    $('sheet-title').textContent = title;
-    showError('');
-    const choiceMode = Boolean(nowLabel);
-    sheetChoice.hidden = !choiceMode;
-    sheetPicker.hidden = choiceMode;
-    if (choiceMode) {
+    if (nowLabel) {
+      showSheetView('choice');
       $('sheet-now').textContent = nowLabel;
       $('sheet-earlier').textContent = earlierLabel;
     } else {
@@ -261,16 +282,59 @@ function openTimeSheet({ title, nowLabel, earlierLabel, initial, validate }) {
 
     $('sheet-now').onclick = () => commit(floorToMinute(new Date()));
     $('sheet-earlier').onclick = () => showPicker(floorToMinute(new Date()));
-    $('sheet-confirm').onclick = () => commit(floorToMinute(new Date(sheetInput.value)));
+    $('sheet-confirm').onclick = () => commit(floorToMinute(new Date(input.value)));
     $('sheet-cancel-choice').onclick = () => finish(null);
     $('sheet-cancel-picker').onclick = () => finish(null);
-    sheet.onclick = (event) => {
-      if (event.target === sheet) finish(null);
-    };
-    // Covers closing with the Escape key; a no-op if the sheet was already answered.
-    sheet.onclose = () => resolve(null);
-    sheet.showModal();
   });
+}
+
+// Resolves with {action: 'save', start, end}, {action: 'delete'}, or null if dismissed.
+function openEditSheet(fast) {
+  return runSheet('Edit fast', (finish) => {
+    const startInput = $('edit-start');
+    const endInput = $('edit-end');
+    showSheetView('edit');
+    startInput.max = nowLocalInput();
+    endInput.max = nowLocalInput();
+    startInput.value = toLocalInputValue(new Date(fast.startISO));
+    endInput.value = toLocalInputValue(new Date(fast.endISO));
+
+    $('edit-save').onclick = () => {
+      const start = floorToMinute(new Date(startInput.value));
+      const end = floorToMinute(new Date(endInput.value));
+      const error = validateTimes(start, end);
+      if (error) setSheetError(error);
+      else finish({ action: 'save', start, end });
+    };
+    $('edit-cancel').onclick = () => finish(null);
+    $('edit-delete').onclick = () => {
+      $('sheet-title').textContent = 'Delete fast?';
+      showSheetView('ask');
+      $('ask-message').textContent = `Delete the fast that ended ${formatDayTime(new Date(fast.endISO))}? This can't be undone.`;
+      $('ask-yes').textContent = 'Delete';
+      $('ask-yes').className = 'sheet-btn danger-solid';
+      $('ask-no').textContent = 'Keep it';
+      $('ask-yes').onclick = () => finish({ action: 'delete' });
+      $('ask-no').onclick = () => {
+        $('sheet-title').textContent = 'Edit fast';
+        showSheetView('edit');
+      };
+    };
+  });
+}
+
+// Resolves true if the main button is pressed, false for the other button or if dismissed.
+async function openAskSheet({ title, message, yesLabel, noLabel }) {
+  const answer = await runSheet(title, (finish) => {
+    showSheetView('ask');
+    $('ask-message').textContent = message;
+    $('ask-yes').textContent = yesLabel;
+    $('ask-yes').className = 'sheet-btn main';
+    $('ask-no').textContent = noLabel;
+    $('ask-yes').onclick = () => finish(true);
+    $('ask-no').onclick = () => finish(false);
+  });
+  return answer === true;
 }
 
 // ---------- Actions ----------
@@ -289,14 +353,15 @@ async function startFast() {
   render();
 }
 
-async function stopFast() {
+// With pickTime the sheet opens straight on the date/time picker (used by the "forgot to stop" prompt).
+async function stopFast({ pickTime = false } = {}) {
   const start = new Date(activeFast.startISO);
-  const end = await openTimeSheet({
-    title: 'Stop fast',
-    nowLabel: 'Stop now',
-    earlierLabel: 'Stop at an earlier time',
-    validate: (date) => validateTimes(start, date),
-  });
+  const validate = (date) => validateTimes(start, date);
+  const end = await openTimeSheet(
+    pickTime
+      ? { title: 'Stop fast', initial: floorToMinute(new Date()), validate }
+      : { title: 'Stop fast', nowLabel: 'Stop now', earlierLabel: 'Stop at an earlier time', validate }
+  );
   if (!end) return;
 
   const record = {
@@ -330,6 +395,47 @@ async function changeStartTime() {
   render();
 }
 
+async function editFast(id) {
+  const fasts = loadFasts();
+  const fast = fasts.find((item) => item.id === id);
+  if (!fast) return;
+  const result = await openEditSheet(fast);
+  if (!result) return;
+
+  const updated =
+    result.action === 'delete'
+      ? fasts.filter((item) => item.id !== id)
+      : fasts.map((item) =>
+          item.id === id ? { ...item, startISO: toMinuteISO(result.start), endISO: toMinuteISO(result.end) } : item
+        );
+  if (!writeJSON(KEYS.fasts, updated)) return;
+  renderLog();
+}
+
+let forgottenPromptOpen = false;
+
+// If a running fast is more than 4 hours past its target, ask whether the Stop was forgotten.
+// Runs when the app opens or comes back to the screen, not on every tick, so "Keep going" isn't nagged.
+async function checkForgottenStop() {
+  if (!activeFast || forgottenPromptOpen || sheet.open) return;
+  const elapsedMs = Date.now() - Date.parse(activeFast.startISO);
+  const overMs = elapsedMs - targetHours * HOUR_MS;
+  if (overMs <= FORGOTTEN_AFTER_MS) return;
+
+  forgottenPromptOpen = true;
+  try {
+    const setEnd = await openAskSheet({
+      title: 'Did you forget to stop?',
+      message: `This fast has been running for ${formatElapsed(elapsedMs)}, which is ${formatMinutes(Math.floor(overMs / MINUTE_MS))} past your ${targetHours}h target.`,
+      yesLabel: 'Set the actual end time',
+      noLabel: 'Keep going',
+    });
+    if (setEnd) await stopFast({ pickTime: true });
+  } finally {
+    forgottenPromptOpen = false;
+  }
+}
+
 function setTarget(hours) {
   const next = Math.min(MAX_TARGET_HOURS, Math.max(MIN_TARGET_HOURS, hours));
   if (!writeJSON(KEYS.currentTarget, next)) return;
@@ -346,14 +452,24 @@ $('target-plus').addEventListener('click', () => setTarget(targetHours + 1));
 $('tab-timer').addEventListener('click', () => showView('timer'));
 $('tab-log').addEventListener('click', () => showView('log'));
 
-// Timers pause while the phone is locked, so redraw as soon as the app is visible again.
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') render();
+$('log-list').addEventListener('click', (event) => {
+  const row = event.target.closest('.log-btn');
+  if (row) editFast(row.dataset.id);
 });
-window.addEventListener('pageshow', render);
+
+// Timers pause while the phone is locked, so redraw as soon as the app is visible again.
+function onAppVisible() {
+  render();
+  checkForgottenStop();
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') onAppVisible();
+});
+window.addEventListener('pageshow', onAppVisible);
 setInterval(render, TICK_MS);
 render();
 renderLog();
+checkForgottenStop();
 
 // ---------- Offline support ----------
 
