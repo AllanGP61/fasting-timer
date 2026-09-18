@@ -18,7 +18,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((cache) => cache.addAll(APP_FILES))
+      .then((cache) => cache.addAll(APP_FILES.map((file) => new Request(file, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
   );
 });
@@ -54,7 +54,9 @@ let slowNetworkUntil = 0;
 async function networkFirst(event, request) {
   const cache = await caches.open(CACHE);
 
-  const network = fetch(request).then((response) => {
+  // GitHub Pages lets the browser keep files for 10 minutes; 'no-cache' makes it check for a newer copy every
+  // time (a quick "unchanged" reply when nothing changed) so a new deploy never mixes with older saved files.
+  const network = fetch(new Request(request.url, { cache: 'no-cache' })).then((response) => {
     if (response.ok && !isSignInReturn(request)) cache.put(request, response.clone());
     return response;
   });
