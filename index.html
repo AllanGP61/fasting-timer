@@ -47,15 +47,15 @@
     <div class="view" id="view-log" hidden>
       <header class="log-header">
         <h1>Fast log</h1>
-        <span class="log-count" id="log-count"></span>
+        <button class="export-btn" id="export-csv" type="button" disabled>Export CSV</button>
       </header>
-      <p class="log-hint" id="log-hint" hidden>Tap a fast to edit or delete it.</p>
+      <p class="log-hint" id="log-hint" hidden><span id="log-count"></span> &middot; Tap a fast to edit or delete it.</p>
       <p class="log-empty" id="log-empty">No completed fasts yet. When you stop a fast it appears here.</p>
       <ul class="log-list" id="log-list"></ul>
     </div>
 
     <footer class="footer">
-      <span class="build" id="build">build 4</span>
+      <span class="build" id="build">build 5</span>
     </footer>
 
     <nav class="tabs" aria-label="Views">

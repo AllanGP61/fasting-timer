@@ -200,8 +200,66 @@ function renderLog() {
     .sort((a, b) => Date.parse(b.endISO) - Date.parse(a.endISO) || Date.parse(b.startISO) - Date.parse(a.startISO));
   $('log-empty').hidden = fasts.length > 0;
   $('log-hint').hidden = fasts.length === 0;
+  $('export-csv').disabled = fasts.length === 0;
   $('log-count').textContent = fasts.length === 0 ? '' : fasts.length === 1 ? '1 fast' : `${fasts.length} fasts`;
   $('log-list').replaceChildren(...fasts.map(makeLogRow));
+}
+
+// ---------- CSV export ----------
+
+const CSV_FILENAME = 'fasting-log.csv';
+const CSV_COLUMNS = ['Date', 'Start', 'End', 'Hours', 'Minutes', 'Target'];
+
+const formatCsvDate = (date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+const formatCsvDateTime = (date) => `${formatCsvDate(date)} ${formatClock(date)}`;
+
+// The one place the CSV text is produced. Pure: takes the fasts array, returns the file contents.
+// One row per completed fast, oldest first. Date is the day the fast ended; times are local; no rounding.
+function buildCsvFromLog(fasts) {
+  const rows = fasts
+    .slice()
+    .sort((a, b) => Date.parse(a.endISO) - Date.parse(b.endISO) || Date.parse(a.startISO) - Date.parse(b.startISO))
+    .map((fast) => {
+      const minutes = durationMinutes(fast);
+      return [
+        formatCsvDate(new Date(fast.endISO)),
+        formatCsvDateTime(new Date(fast.startISO)),
+        formatCsvDateTime(new Date(fast.endISO)),
+        Math.floor(minutes / 60),
+        minutes % 60,
+        fast.targetHours,
+      ];
+    });
+  return [CSV_COLUMNS, ...rows].map((row) => row.join(',')).join('\r\n') + '\r\n';
+}
+
+function downloadFile(file) {
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+// Opens the iPhone share sheet with the CSV (choose OneDrive there). Falls back to a plain download.
+async function exportCsv() {
+  const fasts = loadFasts();
+  if (fasts.length === 0) return;
+  const file = new File([buildCsvFromLog(fasts)], CSV_FILENAME, { type: 'text/csv' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.error('Share failed, downloading instead', err);
+    }
+  }
+  downloadFile(file);
 }
 
 function showView(name) {
@@ -449,6 +507,7 @@ $('start-stop').addEventListener('click', () => (activeFast ? stopFast() : start
 $('start-time').addEventListener('click', changeStartTime);
 $('target-minus').addEventListener('click', () => setTarget(targetHours - 1));
 $('target-plus').addEventListener('click', () => setTarget(targetHours + 1));
+$('export-csv').addEventListener('click', exportCsv);
 $('tab-timer').addEventListener('click', () => showView('timer'));
 $('tab-log').addEventListener('click', () => showView('log'));
 
