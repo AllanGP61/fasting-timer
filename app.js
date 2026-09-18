@@ -214,11 +214,11 @@ const formatCsvDate = (date) => `${date.getFullYear()}-${pad2(date.getMonth() + 
 const formatCsvDateTime = (date) => `${formatCsvDate(date)} ${formatClock(date)}`;
 
 // The one place the CSV text is produced. Pure: takes the fasts array, returns the file contents.
-// One row per completed fast, oldest first. Date is the day the fast ended; times are local; no rounding.
+// One row per completed fast, newest first. Date is the day the fast ended; times are local; no rounding.
 function buildCsvFromLog(fasts) {
   const rows = fasts
     .slice()
-    .sort((a, b) => Date.parse(a.endISO) - Date.parse(b.endISO) || Date.parse(a.startISO) - Date.parse(b.startISO))
+    .sort((a, b) => Date.parse(b.endISO) - Date.parse(a.endISO) || Date.parse(b.startISO) - Date.parse(a.startISO))
     .map((fast) => {
       const minutes = durationMinutes(fast);
       return [
