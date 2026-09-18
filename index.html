@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Fasting Timer</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Fasting">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <section class="ring-area">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="ring-track" cx="100" cy="100" r="88"></circle>
+          <circle class="ring-progress" id="ring-progress" cx="100" cy="100" r="88"></circle>
+        </svg>
+        <div class="ring-center" id="ring-center"></div>
+      </div>
+      <div class="readout">
+        <div class="elapsed" id="elapsed">0h 00m</div>
+        <div class="readout-label">elapsed</div>
+      </div>
+    </section>
+
+    <section class="controls">
+      <div class="target" role="group" aria-label="Target duration">
+        <button class="step" id="target-minus" type="button" aria-label="Decrease target by one hour">&minus;</button>
+        <div class="target-value">
+          <span class="target-number" id="target-hours">20</span>
+          <span class="target-unit">hour target</span>
+        </div>
+        <button class="step" id="target-plus" type="button" aria-label="Increase target by one hour">+</button>
+      </div>
+      <button class="primary" id="start-stop" type="button" disabled>Start</button>
+    </section>
+
+    <footer class="footer">
+      Preview: the ring shows a sample 13h fast and Start isn't active yet.
+      <span class="build" id="build">build 1</span>
+    </footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
