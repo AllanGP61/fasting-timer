@@ -426,7 +426,8 @@ function renderOneDrive() {
 
   const connection = getOnedriveConnection();
   const status = oneDriveSyncStatus();
-  const where = inHomeScreenApp() ? 'home-screen app' : 'Safari tab';
+  // Safari and the home-screen icon keep separate storage, so say so if the app was opened the wrong way.
+  const where = inHomeScreenApp() ? '' : ' (Safari tab: use the home-screen icon)';
   const action = $('onedrive-action');
   const note = [syncNote(status), onedriveMessage].filter(Boolean).join(' ');
   $('onedrive-note').hidden = !note;
@@ -440,11 +441,11 @@ function renderOneDrive() {
     action.textContent = 'Reconnect';
     action.dataset.action = 'connect';
   } else if (connection) {
-    $('onedrive-status').textContent = `OneDrive: connected as ${connection.account} (${where})`;
+    $('onedrive-status').textContent = `OneDrive: connected as ${connection.account}${where}`;
     action.textContent = 'Disconnect';
     action.dataset.action = 'disconnect';
   } else {
-    $('onedrive-status').textContent = onedriveNotice ? `OneDrive: ${onedriveNotice}` : `OneDrive: not connected (${where})`;
+    $('onedrive-status').textContent = onedriveNotice ? `OneDrive: ${onedriveNotice}` : `OneDrive: not connected${where}`;
     action.textContent = onedriveNotice ? 'Try again' : 'Connect';
     action.dataset.action = 'connect';
   }

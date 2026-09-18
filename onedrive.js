@@ -9,8 +9,8 @@ const ONEDRIVE = {
   tokenUrl: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
   scopes: 'Files.ReadWrite offline_access openid profile',
   graphUrl: 'https://graph.microsoft.com/v1.0',
-  // Testing folder at the top of OneDrive. The real target is 'Projects/Claude Cowork/Blood Pressure'.
-  uploadFolder: 'Fasting Timer Test',
+  // The folder the Cowork project reads (path inside his personal OneDrive).
+  uploadFolder: 'Projects/Claude Cowork/Blood Pressure',
   uploadTimeoutMs: 15000,
   connectionKey: 'fastingTimer.onedrive',
   pendingSignInKey: 'fastingTimer.onedriveSignIn',
