@@ -50,8 +50,14 @@
         <button class="export-btn" id="export-csv" type="button" disabled>Export CSV</button>
       </header>
       <div class="onedrive-row" id="onedrive-row" hidden>
-        <span class="onedrive-status" id="onedrive-status"></span>
-        <button class="link-btn" id="onedrive-action" type="button"></button>
+        <div class="onedrive-text">
+          <div id="onedrive-status"></div>
+          <div class="onedrive-note" id="onedrive-note" hidden></div>
+        </div>
+        <div class="onedrive-actions">
+          <button class="link-btn" id="onedrive-upload" type="button" hidden>Upload test</button>
+          <button class="link-btn" id="onedrive-action" type="button"></button>
+        </div>
       </div>
       <p class="log-hint" id="log-hint" hidden><span id="log-count"></span> &middot; Tap a fast to edit or delete it.</p>
       <p class="log-empty" id="log-empty">No completed fasts yet. When you stop a fast it appears here.</p>
@@ -59,7 +65,7 @@
     </div>
 
     <footer class="footer">
-      <span class="build" id="build">build 8</span>
+      <span class="build" id="build">build 9</span>
     </footer>
 
     <nav class="tabs" aria-label="Views">

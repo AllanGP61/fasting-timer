@@ -8,6 +8,10 @@ const ONEDRIVE = {
   authorizeUrl: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize',
   tokenUrl: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
   scopes: 'Files.ReadWrite offline_access openid profile',
+  graphUrl: 'https://graph.microsoft.com/v1.0',
+  // Testing folder at the top of OneDrive. The real target is 'Projects/Claude Cowork/Blood Pressure'.
+  uploadFolder: 'Fasting Timer Test',
+  uploadTimeoutMs: 15000,
   connectionKey: 'fastingTimer.onedrive',
   pendingSignInKey: 'fastingTimer.onedriveSignIn',
 };
@@ -157,4 +161,110 @@ async function handleAuthRedirect() {
   } catch (err) {
     return { handled: true, error: "Couldn't reach Microsoft. Check your connection and try again." };
   }
+}
+
+// ---------- Access token (refreshed without leaving the page) ----------
+
+// kind: 'not-connected' | 'reconnect' (sign-in expired or revoked) | 'offline' | 'failed'
+class OnedriveError extends Error {
+  constructor(kind, message) {
+    super(message || kind);
+    this.kind = kind;
+  }
+}
+
+let refreshInFlight = null;
+
+function saveOnedriveConnection(connection) {
+  localStorage.setItem(ONEDRIVE.connectionKey, JSON.stringify(connection));
+}
+
+async function refreshAccessToken(connection) {
+  let response;
+  try {
+    response = await fetch(ONEDRIVE.tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: ONEDRIVE.clientId,
+        grant_type: 'refresh_token',
+        refresh_token: connection.refreshToken,
+        scope: ONEDRIVE.scopes,
+      }),
+    });
+  } catch (err) {
+    throw new OnedriveError('offline', "Couldn't reach Microsoft.");
+  }
+  const tokens = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (tokens.error === 'invalid_grant' || tokens.error === 'interaction_required') {
+      saveOnedriveConnection({ ...connection, accessToken: null, accessExpiresAt: 0, needsReconnect: true });
+      throw new OnedriveError('reconnect', 'The OneDrive sign-in has expired.');
+    }
+    throw new OnedriveError('failed', tokens.error_description ? firstLine(tokens.error_description) : 'Microsoft refused the request.');
+  }
+  // signedInAt is left alone: Microsoft's 24-hour limit counts from the last full sign-in, not from refreshes.
+  saveOnedriveConnection({
+    ...connection,
+    accessToken: tokens.access_token,
+    accessExpiresAt: Date.now() + tokens.expires_in * 1000,
+    refreshToken: tokens.refresh_token || connection.refreshToken,
+    needsReconnect: false,
+  });
+  return tokens.access_token;
+}
+
+// forceRefresh skips the saved token, used when Microsoft rejected it.
+async function getOnedriveAccessToken({ forceRefresh = false } = {}) {
+  const connection = getOnedriveConnection();
+  if (!connection) throw new OnedriveError('not-connected', 'OneDrive is not connected.');
+  if (connection.needsReconnect) throw new OnedriveError('reconnect', 'The OneDrive sign-in has expired.');
+  if (!forceRefresh && connection.accessToken && connection.accessExpiresAt - Date.now() > 2 * 60 * 1000) {
+    return connection.accessToken;
+  }
+  if (!refreshInFlight) {
+    refreshInFlight = refreshAccessToken(connection).finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+// ---------- Upload ----------
+
+function onedriveUploadUrl() {
+  const path = [...ONEDRIVE.uploadFolder.split('/'), CSV_FILENAME].map(encodeURIComponent).join('/');
+  return `${ONEDRIVE.graphUrl}/me/drive/root:/${path}:/content?@microsoft.graph.conflictBehavior=replace`;
+}
+
+async function putCsv(csvText, token) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ONEDRIVE.uploadTimeoutMs);
+  try {
+    return await fetch(onedriveUploadUrl(), {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'text/csv' },
+      body: csvText,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    throw new OnedriveError('offline', err.name === 'AbortError' ? 'OneDrive took too long to answer.' : "Couldn't reach OneDrive.");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Creates or replaces fasting-log.csv in the OneDrive folder. Resolves with {name, size}.
+async function uploadCsvToOneDrive(csvText) {
+  let response = await putCsv(csvText, await getOnedriveAccessToken());
+  if (response.status === 401) {
+    response = await putCsv(csvText, await getOnedriveAccessToken({ forceRefresh: true }));
+  }
+  if (response.status === 401) throw new OnedriveError('reconnect', 'OneDrive did not accept the sign-in.');
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new OnedriveError('failed', (body.error && body.error.message) || `OneDrive answered ${response.status}.`);
+  }
+  const item = await response.json().catch(() => ({}));
+  return { name: item.name || CSV_FILENAME, size: item.size };
 }

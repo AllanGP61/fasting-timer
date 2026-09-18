@@ -398,6 +398,7 @@ async function openAskSheet({ title, message, yesLabel, noLabel }) {
 // ---------- OneDrive connection (the sign-in itself lives in onedrive.js) ----------
 
 let onedriveNotice = '';
+let onedriveResult = '';
 
 const inHomeScreenApp = () => window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 
@@ -409,7 +410,15 @@ function renderOneDrive() {
   const connection = getOnedriveConnection();
   const where = inHomeScreenApp() ? 'home-screen app' : 'Safari tab';
   const action = $('onedrive-action');
-  if (connection) {
+  const usable = Boolean(connection) && !connection.needsReconnect;
+  $('onedrive-upload').hidden = !usable;
+  $('onedrive-note').hidden = !onedriveResult;
+  $('onedrive-note').textContent = onedriveResult;
+  if (connection && connection.needsReconnect) {
+    $('onedrive-status').textContent = 'OneDrive: sign-in expired';
+    action.textContent = 'Reconnect';
+    action.dataset.action = 'connect';
+  } else if (connection) {
     $('onedrive-status').textContent = `OneDrive: connected as ${connection.account} (${where})`;
     action.textContent = 'Disconnect';
     action.dataset.action = 'disconnect';
@@ -431,6 +440,7 @@ async function onOneDriveAction() {
     if (!disconnect) return;
     disconnectOneDrive();
     onedriveNotice = '';
+    onedriveResult = '';
     renderOneDrive();
     return;
   }
@@ -442,6 +452,20 @@ async function onOneDriveAction() {
     onedriveNotice = "couldn't start the sign-in.";
     renderOneDrive();
   }
+}
+
+// Temporary test button for build 9: uploads the current log once to the testing folder.
+async function uploadTest() {
+  onedriveResult = 'Uploading…';
+  renderOneDrive();
+  try {
+    const item = await uploadCsvToOneDrive(buildCsvFromLog(loadFasts()));
+    onedriveResult = `Uploaded ${item.name} (${item.size} bytes) to "${ONEDRIVE.uploadFolder}" at ${formatClock(new Date())}.`;
+  } catch (err) {
+    console.error('OneDrive upload failed', err);
+    onedriveResult = `Upload failed (${err.kind || 'error'}): ${err.message}`;
+  }
+  renderOneDrive();
 }
 
 // Runs at load: finishes a sign-in if this page load is Microsoft sending the browser back.
@@ -568,6 +592,7 @@ $('target-minus').addEventListener('click', () => setTarget(targetHours - 1));
 $('target-plus').addEventListener('click', () => setTarget(targetHours + 1));
 $('export-csv').addEventListener('click', exportCsv);
 $('onedrive-action').addEventListener('click', onOneDriveAction);
+$('onedrive-upload').addEventListener('click', uploadTest);
 $('tab-timer').addEventListener('click', () => showView('timer'));
 $('tab-log').addEventListener('click', () => showView('log'));
 
