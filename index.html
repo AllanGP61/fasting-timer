@@ -49,13 +49,17 @@
         <h1>Fast log</h1>
         <button class="export-btn" id="export-csv" type="button" disabled>Export CSV</button>
       </header>
+      <div class="onedrive-row" id="onedrive-row" hidden>
+        <span class="onedrive-status" id="onedrive-status"></span>
+        <button class="link-btn" id="onedrive-action" type="button"></button>
+      </div>
       <p class="log-hint" id="log-hint" hidden><span id="log-count"></span> &middot; Tap a fast to edit or delete it.</p>
       <p class="log-empty" id="log-empty">No completed fasts yet. When you stop a fast it appears here.</p>
       <ul class="log-list" id="log-list"></ul>
     </div>
 
     <footer class="footer">
-      <span class="build" id="build">build 6</span>
+      <span class="build" id="build">build 7</span>
     </footer>
 
     <nav class="tabs" aria-label="Views">
@@ -93,6 +97,7 @@
     </div>
   </dialog>
 
+  <script src="onedrive.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

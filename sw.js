@@ -1,12 +1,13 @@
 'use strict';
 
-const CACHE = 'fasting-timer-v1';
+const CACHE = 'fasting-timer-v2';
 const NETWORK_TIMEOUT_MS = 3000;
 const APP_FILES = [
   './',
   'index.html',
   'style.css',
   'app.js',
+  'onedrive.js',
   'manifest.webmanifest',
   'icons/apple-touch-icon.png',
   'icons/icon-192.png',
@@ -37,6 +38,12 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(networkFirst(event, request));
 });
 
+// Microsoft sends the browser back to the app with a one-time ?code=... in the address; never save those.
+function isSignInReturn(request) {
+  const params = new URL(request.url).searchParams;
+  return params.has('code') || params.has('error');
+}
+
 // After one request times out, skip the wait for the next 30 seconds so the CSS and
 // JS files don't each add their own 3-second delay to the same page load.
 const SLOW_NETWORK_MEMORY_MS = 30000;
@@ -48,7 +55,7 @@ async function networkFirst(event, request) {
   const cache = await caches.open(CACHE);
 
   const network = fetch(request).then((response) => {
-    if (response.ok) cache.put(request, response.clone());
+    if (response.ok && !isSignInReturn(request)) cache.put(request, response.clone());
     return response;
   });
   event.waitUntil(network.catch(() => {}));

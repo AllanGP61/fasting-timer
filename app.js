@@ -395,6 +395,65 @@ async function openAskSheet({ title, message, yesLabel, noLabel }) {
   return answer === true;
 }
 
+// ---------- OneDrive connection (the sign-in itself lives in onedrive.js) ----------
+
+let onedriveNotice = '';
+
+const inHomeScreenApp = () => window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
+function renderOneDrive() {
+  const row = $('onedrive-row');
+  row.hidden = !onedriveConfigured();
+  if (row.hidden) return;
+
+  const connection = getOnedriveConnection();
+  const where = inHomeScreenApp() ? 'home-screen app' : 'Safari tab';
+  const action = $('onedrive-action');
+  if (connection) {
+    $('onedrive-status').textContent = `OneDrive: connected as ${connection.account} (${where})`;
+    action.textContent = 'Disconnect';
+    action.dataset.action = 'disconnect';
+  } else {
+    $('onedrive-status').textContent = onedriveNotice ? `OneDrive: ${onedriveNotice}` : `OneDrive: not connected (${where})`;
+    action.textContent = onedriveNotice ? 'Try again' : 'Connect';
+    action.dataset.action = 'connect';
+  }
+}
+
+async function onOneDriveAction() {
+  if ($('onedrive-action').dataset.action === 'disconnect') {
+    const disconnect = await openAskSheet({
+      title: 'Disconnect OneDrive?',
+      message: 'The app will stop uploading until you connect again. Your fasts stay on this phone.',
+      yesLabel: 'Disconnect',
+      noLabel: 'Keep connected',
+    });
+    if (!disconnect) return;
+    disconnectOneDrive();
+    onedriveNotice = '';
+    renderOneDrive();
+    return;
+  }
+  onedriveNotice = '';
+  try {
+    await connectOneDrive();
+  } catch (err) {
+    console.error('Could not start the OneDrive sign-in', err);
+    onedriveNotice = "couldn't start the sign-in.";
+    renderOneDrive();
+  }
+}
+
+// Runs at load: finishes a sign-in if this page load is Microsoft sending the browser back.
+async function initOneDrive() {
+  const result = await handleAuthRedirect();
+  if (result.handled) {
+    onedriveNotice = result.error ? `sign-in failed. ${result.error}` : '';
+    showView('log');
+  }
+  renderOneDrive();
+}
+
 // ---------- Actions ----------
 
 async function startFast() {
@@ -508,6 +567,7 @@ $('start-time').addEventListener('click', changeStartTime);
 $('target-minus').addEventListener('click', () => setTarget(targetHours - 1));
 $('target-plus').addEventListener('click', () => setTarget(targetHours + 1));
 $('export-csv').addEventListener('click', exportCsv);
+$('onedrive-action').addEventListener('click', onOneDriveAction);
 $('tab-timer').addEventListener('click', () => showView('timer'));
 $('tab-log').addEventListener('click', () => showView('log'));
 
@@ -529,6 +589,7 @@ setInterval(render, TICK_MS);
 render();
 renderLog();
 checkForgottenStop();
+initOneDrive();
 
 // ---------- Offline support ----------
 

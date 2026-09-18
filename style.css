@@ -437,3 +437,27 @@ button {
   color: var(--muted);
   font-size: 15px;
 }
+
+.onedrive-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding: 8px 8px 8px 14px;
+  border-radius: 12px;
+  background: var(--button-bg);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.link-btn {
+  flex: none;
+  min-height: 40px;
+  padding: 0 8px;
+  background: none;
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 600;
+}
