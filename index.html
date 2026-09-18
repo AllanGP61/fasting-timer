@@ -25,7 +25,8 @@
       </div>
       <div class="readout">
         <div class="elapsed" id="elapsed">0h 00m</div>
-        <div class="readout-label">elapsed</div>
+        <div class="readout-label" id="readout-label">not fasting</div>
+        <button class="link" id="start-time" type="button" disabled></button>
       </div>
     </section>
 
@@ -38,14 +39,31 @@
         </div>
         <button class="step" id="target-plus" type="button" aria-label="Increase target by one hour">+</button>
       </div>
-      <button class="primary" id="start-stop" type="button" disabled>Start</button>
+      <button class="primary" id="start-stop" type="button">Start</button>
     </section>
 
     <footer class="footer">
-      Preview: the ring shows a sample 13h fast and Start isn't active yet.
-      <span class="build" id="build">build 1</span>
+      <span class="build" id="build">build 2</span>
     </footer>
   </main>
+
+  <dialog class="sheet" id="sheet" aria-labelledby="sheet-title">
+    <div class="sheet-body">
+      <h2 id="sheet-title"></h2>
+      <p class="sheet-error" id="sheet-error" role="alert" hidden></p>
+      <div class="sheet-view" id="sheet-choice">
+        <button class="sheet-btn main" id="sheet-now" type="button"></button>
+        <button class="sheet-btn" id="sheet-earlier" type="button"></button>
+        <button class="sheet-btn plain" id="sheet-cancel-choice" type="button">Cancel</button>
+      </div>
+      <div class="sheet-view" id="sheet-picker" hidden>
+        <input type="datetime-local" id="sheet-input" aria-label="Date and time">
+        <button class="sheet-btn main" id="sheet-confirm" type="button">Confirm</button>
+        <button class="sheet-btn plain" id="sheet-cancel-picker" type="button">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+
   <script src="app.js"></script>
 </body>
 </html>
