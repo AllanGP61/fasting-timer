@@ -4,7 +4,7 @@
 // Authorization code + PKCE with a full-page redirect (no pop-ups, no hidden frames).
 
 const ONEDRIVE = {
-  clientId: 'PASTE-CLIENT-ID-HERE',
+  clientId: 'af9c0332-0f12-4bdf-a07c-1ecc9385ebeb',
   authorizeUrl: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize',
   tokenUrl: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
   scopes: 'Files.ReadWrite offline_access openid profile',
