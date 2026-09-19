@@ -108,10 +108,8 @@ async function connectOneDrive({ silent = false, manual = false } = {}) {
   const verifier = randomToken(48);
   const connection = getOnedriveConnection();
   const extra = {};
-  if (silent) {
-    extra.prompt = 'none';
-    if (connection && /@/.test(connection.account)) extra.login_hint = connection.account;
-  }
+  if (connection && /@/.test(connection.account)) extra.login_hint = connection.account;
+  if (silent) extra.prompt = 'none';
   const url = await buildSignInUrl(state, verifier, extra);
   localStorage.setItem(ONEDRIVE.pendingSignInKey, JSON.stringify({ state, verifier, startedAt: Date.now(), silent, manual }));
   onedriveHooks.navigate(url);
@@ -150,8 +148,9 @@ async function completeSignIn(params) {
   cleanAddressBar();
 
   if (error) {
-    if (flags.silent) setQuietBackoff();
-    return { ...flags, error: description ? firstLine(description) : error };
+    const message = description ? firstLine(description) : error;
+    if (flags.silent) refuseQuiet(message);
+    return { ...flags, error: message };
   }
   if (!pending || !returnedState || pending.state !== returnedState) {
     return { ...flags, error: 'The sign-in could not be verified. Please try again.' };
@@ -172,7 +171,9 @@ async function completeSignIn(params) {
     });
     const tokens = await response.json();
     if (!response.ok || !tokens.refresh_token) {
-      return { ...flags, error: tokens.error_description ? firstLine(tokens.error_description) : 'Microsoft did not complete the sign-in.' };
+      const message = tokens.error_description ? firstLine(tokens.error_description) : 'Microsoft did not complete the sign-in.';
+      if (flags.silent) refuseQuiet(message);
+      return { ...flags, error: message };
     }
     const claims = decodeJwtClaims(tokens.id_token || '');
     localStorage.setItem(
@@ -185,7 +186,7 @@ async function completeSignIn(params) {
         account: claims.preferred_username || claims.email || claims.name || 'your Microsoft account',
       })
     );
-    localStorage.setItem(ONEDRIVE.quietKey, JSON.stringify({ ...readQuietState(), backoffUntil: 0 }));
+    updateQuietState({ backoffUntil: 0, lastRefusal: null });
     return { ...flags, connected: true };
   } catch (err) {
     return { ...flags, error: "Couldn't reach Microsoft. Check your connection and try again." };
@@ -389,20 +390,39 @@ function readQuietState() {
   return readOnedriveJSON(ONEDRIVE.quietKey) || {};
 }
 
-function setQuietBackoff() {
-  localStorage.setItem(ONEDRIVE.quietKey, JSON.stringify({ ...readQuietState(), backoffUntil: Date.now() + ONEDRIVE.quietFailureBackoffMs }));
+function updateQuietState(changes) {
+  localStorage.setItem(ONEDRIVE.quietKey, JSON.stringify({ ...readQuietState(), ...changes }));
 }
+
+// Microsoft (or the token step) said no to a quiet renewal: back off for a while and remember why.
+function refuseQuiet(reason) {
+  updateQuietState({ backoffUntil: Date.now() + ONEDRIVE.quietFailureBackoffMs, lastRefusal: { at: Date.now(), reason } });
+}
+
+// The last quiet renewal Microsoft refused, if nothing has succeeded since; otherwise null.
+function quietRefusal() {
+  const refusal = readQuietState().lastRefusal;
+  return refusal && typeof refusal.at === 'number' ? refusal : null;
+}
+
+// When the current sign-in stops working: Microsoft ends a browser app's sign-in 24 hours after it was made.
+const onedriveExpiresAt = (connection) => (connection && connection.signedInAt ? connection.signedInAt + 24 * 3600000 : null);
 
 // If the sign-in is getting old, send the browser to Microsoft to renew it without showing anything.
 // Resolves true if it started (the page is about to leave). The guards stop it looping if Microsoft says no.
+// Times remembered from the future (for example after the phone's clock was moved) are ignored, not obeyed.
 async function maybeQuietSignIn() {
   const connection = getOnedriveConnection();
   const quiet = readQuietState();
   const now = Date.now();
   if (!connection || signInReturnInProgress || navigator.onLine === false) return false;
-  if (now - (connection.signedInAt || 0) < ONEDRIVE.quietRefreshAfterMs) return false;
-  if (now - (quiet.lastAttemptAt || 0) < ONEDRIVE.quietAttemptGapMs || now < (quiet.backoffUntil || 0)) return false;
-  localStorage.setItem(ONEDRIVE.quietKey, JSON.stringify({ ...quiet, lastAttemptAt: now }));
+
+  const signedInAt = connection.signedInAt > now ? 0 : connection.signedInAt || 0;
+  const lastAttemptAt = quiet.lastAttemptAt > now ? 0 : quiet.lastAttemptAt || 0;
+  const backoffUntil = quiet.backoffUntil > now + ONEDRIVE.quietFailureBackoffMs ? 0 : quiet.backoffUntil || 0;
+  if (now - signedInAt < ONEDRIVE.quietRefreshAfterMs) return false;
+  if (now - lastAttemptAt < ONEDRIVE.quietAttemptGapMs || now < backoffUntil) return false;
+  updateQuietState({ lastAttemptAt: now });
   await connectOneDrive({ silent: true });
   return true;
 }

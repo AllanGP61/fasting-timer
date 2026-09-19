@@ -438,12 +438,19 @@ function renderOneDrive() {
   // Safari and the home-screen icon keep separate storage, so say so if the app was opened the wrong way.
   const where = inHomeScreenApp() ? '' : ' (Safari tab: use the home-screen icon)';
   const action = $('onedrive-action');
-  const note = [syncNote(status), onedriveMessage].filter(Boolean).join(' ');
+  // If Microsoft has refused a quiet renewal, say so plainly, when the sign-in runs out, and offer Reconnect.
+  const refusal = connection && !status.needsReconnect ? quietRefusal() : null;
+  const expiresAt = onedriveExpiresAt(connection);
+  const refusalNote = refusal
+    ? `Microsoft refused a quiet renewal (${describeWhen(refusal.at)}), so this sign-in runs out ${describeWhen(expiresAt)}. Tap Reconnect before then.`
+    : '';
+  const note = [syncNote(status), refusalNote, onedriveMessage].filter(Boolean).join(' ');
   $('onedrive-note').hidden = !note;
   $('onedrive-note').textContent = note;
   $('onedrive-signin').hidden = !connection;
   if (connection) $('onedrive-signin').textContent = `Signed in ${describeWhen(connection.signedInAt)}`;
-  $('onedrive-refresh').hidden = !connection || status.needsReconnect;
+  $('onedrive-refresh').hidden = !connection || status.needsReconnect || Boolean(refusal);
+  $('onedrive-reconnect').hidden = !refusal;
 
   if (status.needsReconnect) {
     $('onedrive-status').textContent = 'OneDrive: sign-in expired';
@@ -460,8 +467,27 @@ function renderOneDrive() {
   }
 
   // A problem shows on the Timer tab too, so it isn't missed.
-  alert.hidden = !(status.needsReconnect || (status.connected && status.pending && status.lastError));
-  alert.textContent = status.needsReconnect ? 'OneDrive: sign-in expired. Tap to reconnect.' : 'OneDrive: not uploaded yet. Tap for details.';
+  const runsOutSoon = Boolean(refusal && expiresAt && expiresAt - Date.now() < 4 * 3600000);
+  const needsReconnectNow = status.needsReconnect || runsOutSoon;
+  alert.hidden = !(needsReconnectNow || (status.connected && status.pending && status.lastError));
+  alert.dataset.action = needsReconnectNow ? 'reconnect' : 'log';
+  alert.textContent = status.needsReconnect
+    ? 'OneDrive: sign-in expired. Tap to reconnect.'
+    : runsOutSoon
+      ? 'OneDrive: sign-in runs out soon. Tap to reconnect.'
+      : 'OneDrive: not uploaded yet. Tap for details.';
+}
+
+// Starts a full (visible) Microsoft sign-in. Used by Connect, Reconnect and the amber line.
+async function reconnectOneDrive() {
+  onedriveNotice = '';
+  try {
+    await connectOneDrive();
+  } catch (err) {
+    console.error('Could not start the OneDrive sign-in', err);
+    onedriveNotice = "couldn't start the sign-in.";
+    renderOneDrive();
+  }
 }
 
 async function onOneDriveAction() {
@@ -479,14 +505,7 @@ async function onOneDriveAction() {
     renderOneDrive();
     return;
   }
-  onedriveNotice = '';
-  try {
-    await connectOneDrive();
-  } catch (err) {
-    console.error('Could not start the OneDrive sign-in', err);
-    onedriveNotice = "couldn't start the sign-in.";
-    renderOneDrive();
-  }
+  await reconnectOneDrive();
 }
 
 // Runs at load: finishes a sign-in if this page load is Microsoft sending the browser back.
@@ -500,7 +519,7 @@ async function initOneDrive() {
     } else if (result.manual) {
       onedriveMessage = result.connected
         ? 'Sign-in refreshed.'
-        : "Couldn't refresh quietly. Use Reconnect if uploads stop.";
+        : "Couldn't refresh quietly.";
       showView('log');
     } else if (result.error) {
       // A background renewal that didn't work is only shown if the sign-in later actually expires.
@@ -627,7 +646,8 @@ $('target-plus').addEventListener('click', () => setTarget(targetHours + 1));
 $('mood-btn').addEventListener('click', chooseMood);
 $('export-csv').addEventListener('click', exportCsv);
 $('onedrive-action').addEventListener('click', onOneDriveAction);
-$('onedrive-alert').addEventListener('click', () => showView('log'));
+$('onedrive-alert').addEventListener('click', () => ($('onedrive-alert').dataset.action === 'reconnect' ? reconnectOneDrive() : showView('log')));
+$('onedrive-reconnect').addEventListener('click', reconnectOneDrive);
 $('onedrive-refresh').addEventListener('click', () => {
   onedriveMessage = 'Refreshing…';
   renderOneDrive();
