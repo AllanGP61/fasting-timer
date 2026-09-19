@@ -121,6 +121,10 @@ async function backUpEverything() {
   const name = `fasting-timer-backup-${formatCsvDate(new Date())}.json`;
   const result = await shareOrDownload(new File([buildBackupJson(fasts, mood)], name, { type: 'application/json' }));
   const summary = countsText(fasts.length, moodDays);
+  if (result !== 'cancelled') {
+    writeJSON(KEYS.lastBackup, Date.now());
+    renderBackupStatus();
+  }
   showBackupMessage(result === 'cancelled' ? '' : result === 'shared' ? `Backup shared: ${summary}.` : `Backup downloaded: ${summary}.`);
 }
 
@@ -179,4 +183,27 @@ async function onRestoreFileChosen(event) {
   } finally {
     input.value = ''; // so the same file can be chosen again
   }
+}
+
+// ---------- When the last backup was made (shown on the folded Backup row) ----------
+
+// Plain-English age of a moment, counted in calendar days: today, yesterday, 3 days ago, 2 weeks ago...
+function backupAgeText(timestamp, now = new Date()) {
+  const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const days = Math.round((startOfDay(now) - startOfDay(new Date(timestamp))) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 14) return `${days} days ago`;
+  if (days < 60) return `${Math.floor(days / 7)} weeks ago`;
+  return `${Math.floor(days / 30)} months ago`;
+}
+
+function lastBackupAt() {
+  const saved = readJSON(KEYS.lastBackup);
+  return Number.isFinite(saved) && saved > 0 ? saved : null;
+}
+
+function renderBackupStatus() {
+  const saved = lastBackupAt();
+  document.getElementById('backup-status').textContent = saved ? `Last backed up ${backupAgeText(saved)}` : 'Not backed up yet';
 }

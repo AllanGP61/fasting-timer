@@ -72,8 +72,23 @@
       <header class="log-header">
         <h1>More</h1>
       </header>
+      <section class="more-section" aria-labelledby="mood-history-title">
+        <div class="section-head">
+          <h2 id="mood-history-title">Mood history</h2>
+          <span class="section-count" id="mood-count"></span>
+        </div>
+        <p class="section-hint" id="mood-hint">Newest first. To change today's mood, tap the face in the ring on the Timer tab.</p>
+        <p class="log-empty" id="mood-empty" hidden>No moods logged yet. Tap Mood in the ring on the Timer tab.</p>
+        <ul class="mood-list" id="mood-list"></ul>
+      </section>
+
       <details class="backup-details" id="backup-details">
-        <summary>Backup</summary>
+        <summary>
+          <span class="backup-summary-text">
+            <span class="backup-title">Backup and restore</span>
+            <span class="backup-status" id="backup-status"></span>
+          </span>
+        </summary>
         <div class="backup-body">
           <p class="section-hint">Saves all your fasts and moods in one file (choose OneDrive or Files in the share sheet). Restore adds anything that's missing; it never deletes or overwrites what's on this phone.</p>
           <div class="backup-actions">
@@ -84,21 +99,11 @@
           <input class="visually-hidden" type="file" id="restore-file" accept=".json,application/json" tabindex="-1" aria-hidden="true">
         </div>
       </details>
-
-      <section class="more-section" aria-labelledby="mood-history-title">
-        <div class="section-head">
-          <h2 id="mood-history-title">Mood history</h2>
-          <span class="section-count" id="mood-count"></span>
-        </div>
-        <p class="section-hint" id="mood-hint">Newest first. To change today's mood, tap the face in the ring on the Timer tab.</p>
-        <p class="log-empty" id="mood-empty" hidden>No moods logged yet. Tap Mood in the ring on the Timer tab.</p>
-        <ul class="mood-list" id="mood-list"></ul>
-      </section>
     </div>
 
     <footer class="footer">
       <button class="footer-alert" id="onedrive-alert" type="button" hidden></button>
-      <span class="build" id="build">build 18</span>
+      <span class="build" id="build">build 19</span>
     </footer>
 
     <nav class="tabs" aria-label="Views">

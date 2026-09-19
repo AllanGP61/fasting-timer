@@ -13,6 +13,7 @@ const KEYS = {
   activeFast: 'fastingTimer.activeFast',
   currentTarget: 'fastingTimer.currentTarget',
   mood: 'fastingTimer.mood',
+  lastBackup: 'fastingTimer.lastBackup',
 };
 
 const $ = (id) => document.getElementById(id);
@@ -275,8 +276,12 @@ function showView(name) {
     $(`tab-${view}`).setAttribute('aria-selected', String(view === name));
   }
   if (name === 'log') renderLog();
-  if (name === 'more') renderMoodHistory();
-  else $('backup-details').open = false; // Backup starts folded up each time More is opened
+  if (name === 'more') {
+    renderMoodHistory();
+    renderBackupStatus();
+  } else {
+    $('backup-details').open = false; // Backup starts folded up each time More is opened
+  }
   window.scrollTo(0, 0);
 }
 
@@ -660,6 +665,10 @@ $('tab-more').addEventListener('click', () => showView('more'));
 $('backup-btn').addEventListener('click', backUpEverything);
 $('restore-btn').addEventListener('click', () => $('restore-file').click());
 $('restore-file').addEventListener('change', onRestoreFileChosen);
+// The Backup row now sits below the mood list, so bring it fully into view when it opens.
+$('backup-details').addEventListener('toggle', () => {
+  if ($('backup-details').open) $('backup-details').scrollIntoView({ block: 'nearest' });
+});
 
 $('log-list').addEventListener('click', (event) => {
   const row = event.target.closest('.log-btn');

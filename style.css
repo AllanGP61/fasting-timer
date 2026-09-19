@@ -665,7 +665,8 @@ button {
 }
 
 .backup-details {
-  margin-bottom: 20px;
+  margin: 8px 0 16px;
+  scroll-margin-bottom: 84px;
   border-radius: 14px;
   background: var(--button-bg);
 }
@@ -707,4 +708,22 @@ button {
 
 .backup-body .section-hint {
   margin: 0 0 12px;
+}
+
+.backup-summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 0;
+}
+
+.backup-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.backup-status {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
 }
