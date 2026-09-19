@@ -22,7 +22,9 @@
             <circle class="ring-track" cx="100" cy="100" r="88"></circle>
             <circle class="ring-progress" id="ring-progress" cx="100" cy="100" r="88"></circle>
           </svg>
-          <div class="ring-center" id="ring-center"></div>
+          <div class="ring-center" id="ring-center">
+            <button class="mood-btn" id="mood-btn" type="button">Mood</button>
+          </div>
         </div>
         <div class="readout">
           <div class="elapsed" id="elapsed">0h 00m</div>
@@ -67,7 +69,7 @@
 
     <footer class="footer">
       <button class="footer-alert" id="onedrive-alert" type="button" hidden></button>
-      <span class="build" id="build">build 13</span>
+      <span class="build" id="build">build 14</span>
     </footer>
 
     <nav class="tabs" aria-label="Views">
@@ -97,6 +99,10 @@
         <button class="sheet-btn plain" id="edit-cancel" type="button">Cancel</button>
         <button class="sheet-btn danger" id="edit-delete" type="button">Delete this fast</button>
       </div>
+      <div class="sheet-view" id="sheet-mood" hidden>
+        <div class="mood-row" id="mood-row"></div>
+        <button class="sheet-btn plain" id="mood-cancel" type="button">Cancel</button>
+      </div>
       <div class="sheet-view" id="sheet-ask" hidden>
         <p class="sheet-message" id="ask-message"></p>
         <button class="sheet-btn main" id="ask-yes" type="button"></button>
@@ -106,6 +112,7 @@
   </dialog>
 
   <script src="onedrive.js"></script>
+  <script src="mood.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

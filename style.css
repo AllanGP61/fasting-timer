@@ -67,8 +67,9 @@ button {
 }
 
 .ring-wrap {
+  --ring: min(78vw, 36dvh, 320px);
   position: relative;
-  width: min(78vw, 36dvh, 320px);
+  width: var(--ring);
   aspect-ratio: 1;
 }
 
@@ -103,6 +104,30 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
+}
+
+/* About half the ring's inner circle, so it sits well inside the ring and clear of the time below it. */
+.mood-btn {
+  pointer-events: auto;
+  width: calc(var(--ring) * 0.46);
+  height: calc(var(--ring) * 0.46);
+  border: 2px solid var(--track);
+  border-radius: 50%;
+  background: var(--button-bg);
+  color: var(--text);
+  font-size: calc(var(--ring) * 0.075);
+  font-weight: 600;
+}
+
+.mood-btn:active {
+  background: var(--track);
+}
+
+.mood-btn.logged {
+  border-color: transparent;
+  font-size: calc(var(--ring) * 0.26);
+  line-height: 1;
 }
 
 .readout {
@@ -495,4 +520,39 @@ button {
 .onedrive-signin {
   margin-top: 2px;
   font-size: 13px;
+}
+
+.mood-row {
+  display: flex;
+  gap: 6px;
+}
+
+.mood-choice {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 0 10px;
+  border-radius: 16px;
+  background: var(--track);
+}
+
+.mood-choice[aria-pressed="true"] {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.mood-choice:active {
+  filter: brightness(1.2);
+}
+
+.mood-face {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.mood-label {
+  color: var(--muted);
+  font-size: 11px;
 }

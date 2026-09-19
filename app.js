@@ -12,6 +12,7 @@ const KEYS = {
   fasts: 'fastingTimer.fasts',
   activeFast: 'fastingTimer.activeFast',
   currentTarget: 'fastingTimer.currentTarget',
+  mood: 'fastingTimer.mood',
 };
 
 const $ = (id) => document.getElementById(id);
@@ -159,6 +160,8 @@ function render() {
   $('target-hours').textContent = targetHours;
   $('target-minus').disabled = targetHours <= MIN_TARGET_HOURS;
   $('target-plus').disabled = targetHours >= MAX_TARGET_HOURS;
+
+  renderRingMood();
 }
 
 // ---------- Log ----------
@@ -274,7 +277,7 @@ function showView(name) {
 // ---------- Sheet (bottom pop-up for time choices, editing and confirmations) ----------
 
 const sheet = $('sheet');
-const SHEET_VIEWS = ['choice', 'picker', 'edit', 'ask'];
+const SHEET_VIEWS = ['choice', 'picker', 'edit', 'mood', 'ask'];
 
 function setSheetError(message) {
   $('sheet-error').textContent = message || '';
@@ -615,6 +618,7 @@ $('start-stop').addEventListener('click', () => (activeFast ? stopFast() : start
 $('start-time').addEventListener('click', changeStartTime);
 $('target-minus').addEventListener('click', () => setTarget(targetHours - 1));
 $('target-plus').addEventListener('click', () => setTarget(targetHours + 1));
+$('mood-btn').addEventListener('click', chooseMood);
 $('export-csv').addEventListener('click', exportCsv);
 $('onedrive-action').addEventListener('click', onOneDriveAction);
 $('onedrive-alert').addEventListener('click', () => showView('log'));
