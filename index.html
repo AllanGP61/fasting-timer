@@ -67,14 +67,30 @@
       <ul class="log-list" id="log-list"></ul>
     </div>
 
+    <div class="view" id="view-more" hidden>
+      <header class="log-header">
+        <h1>More</h1>
+      </header>
+      <section class="more-section" aria-labelledby="mood-history-title">
+        <div class="section-head">
+          <h2 id="mood-history-title">Mood history</h2>
+          <span class="section-count" id="mood-count"></span>
+        </div>
+        <p class="section-hint" id="mood-hint">Newest first. To change today's mood, tap the face in the ring on the Timer tab.</p>
+        <p class="log-empty" id="mood-empty" hidden>No moods logged yet. Tap Mood in the ring on the Timer tab.</p>
+        <ul class="mood-list" id="mood-list"></ul>
+      </section>
+    </div>
+
     <footer class="footer">
       <button class="footer-alert" id="onedrive-alert" type="button" hidden></button>
-      <span class="build" id="build">build 14</span>
+      <span class="build" id="build">build 15</span>
     </footer>
 
     <nav class="tabs" aria-label="Views">
       <button id="tab-timer" type="button" aria-selected="true">Timer</button>
       <button id="tab-log" type="button" aria-selected="false">Log</button>
+      <button id="tab-more" type="button" aria-selected="false">More</button>
     </nav>
   </main>
 

@@ -266,11 +266,12 @@ async function exportCsv() {
 }
 
 function showView(name) {
-  for (const view of ['timer', 'log']) {
+  for (const view of ['timer', 'log', 'more']) {
     $(`view-${view}`).hidden = view !== name;
     $(`tab-${view}`).setAttribute('aria-selected', String(view === name));
   }
   if (name === 'log') renderLog();
+  if (name === 'more') renderMoodHistory();
   window.scrollTo(0, 0);
 }
 
@@ -630,6 +631,7 @@ $('onedrive-refresh').addEventListener('click', () => {
 onedriveHooks.changed = renderOneDrive;
 $('tab-timer').addEventListener('click', () => showView('timer'));
 $('tab-log').addEventListener('click', () => showView('log'));
+$('tab-more').addEventListener('click', () => showView('more'));
 
 $('log-list').addEventListener('click', (event) => {
   const row = event.target.closest('.log-btn');

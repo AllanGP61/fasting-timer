@@ -556,3 +556,68 @@ button {
   color: var(--muted);
   font-size: 11px;
 }
+
+.more-section h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.section-count {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.section-hint {
+  margin: 4px 4px 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.mood-list {
+  margin: 0;
+  padding: 0 0 16px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mood-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: var(--button-bg);
+}
+
+.mood-item-day {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.mood-item-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mood-item-face {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.mood-item-label {
+  min-width: 68px;
+  color: var(--muted);
+  font-size: 15px;
+}

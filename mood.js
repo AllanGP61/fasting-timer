@@ -77,3 +77,32 @@ async function chooseMood() {
   if (value === null) return;
   if (setTodaysMood(value)) renderRingMood();
 }
+
+// ---------- History (read-only) ----------
+
+const MOOD_HISTORY_DAYS = 30;
+
+// The most recent days that have a mood, newest first. Nothing here can be edited.
+function renderMoodHistory() {
+  const store = loadMood();
+  const days = Object.keys(store).sort().reverse();
+  const today = moodDayKey();
+
+  document.getElementById('mood-empty').hidden = days.length > 0;
+  document.getElementById('mood-hint').hidden = days.length === 0;
+  document.getElementById('mood-count').textContent =
+    days.length === 0 ? '' : days.length > MOOD_HISTORY_DAYS ? `Latest ${MOOD_HISTORY_DAYS} of ${days.length} days` : days.length === 1 ? '1 day' : `${days.length} days`;
+
+  document.getElementById('mood-list').replaceChildren(
+    ...days.slice(0, MOOD_HISTORY_DAYS).map((day) => {
+      const [year, month, date] = day.split('-').map(Number);
+      const mood = moodFor(store[day].value);
+      const dayName = formatDay(new Date(year, month - 1, date)) + (day === today ? ' \u00b7 today' : '');
+      const value = makeEl('span', 'mood-item-value');
+      value.append(makeEl('span', 'mood-item-face', mood.face), makeEl('span', 'mood-item-label', mood.label));
+      const row = makeEl('li', 'mood-item');
+      row.append(makeEl('span', 'mood-item-day', dayName), value);
+      return row;
+    })
+  );
+}
