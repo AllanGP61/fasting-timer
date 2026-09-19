@@ -71,6 +71,19 @@
       <header class="log-header">
         <h1>More</h1>
       </header>
+      <section class="more-section" aria-labelledby="backup-title">
+        <div class="section-head">
+          <h2 id="backup-title">Backup</h2>
+        </div>
+        <p class="section-hint">Saves all your fasts and moods in one file (choose OneDrive or Files in the share sheet). Restore adds anything that's missing; it never deletes or overwrites what's on this phone.</p>
+        <div class="backup-actions">
+          <button class="wide-btn main" id="backup-btn" type="button">Back up everything</button>
+          <button class="wide-btn" id="restore-btn" type="button">Restore from backup</button>
+        </div>
+        <p class="backup-message" id="backup-message" role="status" hidden></p>
+        <input class="visually-hidden" type="file" id="restore-file" accept=".json,application/json" tabindex="-1" aria-hidden="true">
+      </section>
+
       <section class="more-section" aria-labelledby="mood-history-title">
         <div class="section-head">
           <h2 id="mood-history-title">Mood history</h2>
@@ -84,7 +97,7 @@
 
     <footer class="footer">
       <button class="footer-alert" id="onedrive-alert" type="button" hidden></button>
-      <span class="build" id="build">build 15</span>
+      <span class="build" id="build">build 16</span>
     </footer>
 
     <nav class="tabs" aria-label="Views">
@@ -129,6 +142,7 @@
 
   <script src="onedrive.js"></script>
   <script src="mood.js"></script>
+  <script src="backup.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

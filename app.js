@@ -247,22 +247,26 @@ function downloadFile(file) {
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
-// Opens the iPhone share sheet with the CSV (choose OneDrive there). Falls back to a plain download.
-async function exportCsv() {
-  const fasts = loadFasts();
-  if (fasts.length === 0) return;
-  const file = new File([buildCsvFromLog(fasts)], CSV_FILENAME, { type: 'text/csv' });
-
+// Opens the iPhone share sheet with the file (choose OneDrive or Files there). Falls back to a plain download.
+// Resolves 'shared', 'cancelled' (the share sheet was dismissed) or 'downloaded'.
+async function shareOrDownload(file) {
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file] });
-      return;
+      return 'shared';
     } catch (err) {
-      if (err.name === 'AbortError') return;
+      if (err.name === 'AbortError') return 'cancelled';
       console.error('Share failed, downloading instead', err);
     }
   }
   downloadFile(file);
+  return 'downloaded';
+}
+
+async function exportCsv() {
+  const fasts = loadFasts();
+  if (fasts.length === 0) return;
+  await shareOrDownload(new File([buildCsvFromLog(fasts)], CSV_FILENAME, { type: 'text/csv' }));
 }
 
 function showView(name) {
@@ -632,6 +636,9 @@ onedriveHooks.changed = renderOneDrive;
 $('tab-timer').addEventListener('click', () => showView('timer'));
 $('tab-log').addEventListener('click', () => showView('log'));
 $('tab-more').addEventListener('click', () => showView('more'));
+$('backup-btn').addEventListener('click', backUpEverything);
+$('restore-btn').addEventListener('click', () => $('restore-file').click());
+$('restore-file').addEventListener('change', onRestoreFileChosen);
 
 $('log-list').addEventListener('click', (event) => {
   const row = event.target.closest('.log-btn');

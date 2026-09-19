@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'fasting-timer-v3';
+const CACHE = 'fasting-timer-v4';
 const NETWORK_TIMEOUT_MS = 3000;
 const APP_FILES = [
   './',
@@ -9,6 +9,7 @@ const APP_FILES = [
   'app.js',
   'onedrive.js',
   'mood.js',
+  'backup.js',
   'manifest.webmanifest',
   'icons/apple-touch-icon.png',
   'icons/icon-192.png',

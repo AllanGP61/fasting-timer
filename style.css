@@ -621,3 +621,45 @@ button {
   color: var(--muted);
   font-size: 15px;
 }
+
+.more-section + .more-section {
+  margin-top: 28px;
+}
+
+.backup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wide-btn {
+  width: 100%;
+  height: 56px;
+  border-radius: 28px;
+  background: var(--track);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.wide-btn.main {
+  background: var(--accent);
+}
+
+.wide-btn:active {
+  filter: brightness(0.9);
+}
+
+.backup-message {
+  margin: 12px 4px 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
