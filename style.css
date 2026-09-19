@@ -663,3 +663,48 @@ button {
   opacity: 0;
   pointer-events: none;
 }
+
+.backup-details {
+  margin-bottom: 20px;
+  border-radius: 14px;
+  background: var(--button-bg);
+}
+
+.backup-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  padding: 0 16px;
+  font-size: 17px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.backup-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.backup-details summary::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  margin-right: 4px;
+}
+
+.backup-details[open] summary::after {
+  transform: rotate(-135deg);
+  margin-top: 6px;
+}
+
+.backup-body {
+  padding: 0 16px 16px;
+}
+
+.backup-body .section-hint {
+  margin: 0 0 12px;
+}

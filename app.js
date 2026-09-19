@@ -276,6 +276,7 @@ function showView(name) {
   }
   if (name === 'log') renderLog();
   if (name === 'more') renderMoodHistory();
+  else $('backup-details').open = false; // Backup starts folded up each time More is opened
   window.scrollTo(0, 0);
 }
 
