@@ -5,6 +5,8 @@
   --muted: #94a3b8;
   --accent: #3b82f6;
   --done: #22c55e;
+  --fat-burn: #f46a13;
+  --tick: #ffffff;
   --stop: #dc2626;
   --button-bg: #1e293b;
   color-scheme: dark;
@@ -96,6 +98,31 @@ button {
 
 .ring-progress.done {
   stroke: var(--done);
+}
+
+.ring-progress.has-zone {
+  stroke-linecap: butt;
+}
+
+.ring-zone {
+  stroke: var(--fat-burn);
+  stroke-linecap: round;
+  visibility: hidden;
+  transition: stroke-dasharray 0.4s ease, stroke-dashoffset 0.4s ease;
+}
+
+.ring .ring-start-cap {
+  fill: var(--accent);
+  stroke: none;
+  visibility: hidden;
+}
+
+.ring-tick {
+  stroke: var(--tick);
+  stroke-width: 2;
+  stroke-linecap: butt;
+  opacity: 0.9;
+  visibility: hidden;
 }
 
 .ring-center {

@@ -7,6 +7,7 @@ const HOUR_MS = 3600000;
 const MINUTE_MS = 60000;
 const TICK_MS = 10000;
 const FORGOTTEN_AFTER_MS = 4 * HOUR_MS;
+const FAT_BURNING_HOURS = 16; // elapsed time from which the ring shows the orange fat-burning zone
 
 const KEYS = {
   fasts: 'fastingTimer.fasts',
@@ -132,15 +133,55 @@ let activeFast = loadActiveFast();
 
 // ---------- Ring and readout ----------
 
-const ringProgress = $('ring-progress');
-const CIRCUMFERENCE = 2 * Math.PI * ringProgress.r.baseVal.value;
+const ringProgress = $('ring-progress'); // blue arc (turns green at the target)
+const ringZone = $('ring-zone'); // orange arc: the fat-burning zone
+const ringStartCap = $('ring-start-cap');
+const ringTick = $('ring-tick'); // thin mark at the 16-hour boundary
+const RING_RADIUS = ringProgress.r.baseVal.value;
+const RING_CENTRE = 100; // centre of the ring's 200 x 200 drawing
+const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 ringProgress.style.strokeDasharray = CIRCUMFERENCE;
 
+// Where each part of the ring runs, as fractions (0 to 1) of the way round from 12 o'clock.
+// The ring spans 0 hours to the target, so the 16-hour boundary sits at 16 / target of the way round.
+//   blue:  the blue arc runs from 0 to this.
+//   zoneStart..zoneEnd: the orange arc (equal when there is no orange yet).
+//   tick:  where the boundary tick sits (null when the target is 16 hours or less, so there is no zone).
+//   done:  the target has been reached, so the whole ring goes green.
+function ringSegments(elapsedMs, targetHours) {
+  const clamp = (value) => Math.min(Math.max(value, 0), 1);
+  const targetMs = targetHours * HOUR_MS;
+  const zoneStart = clamp((FAT_BURNING_HOURS * HOUR_MS) / targetMs);
+  const tick = zoneStart < 1 ? zoneStart : null;
+  if (elapsedMs >= targetMs) return { done: true, blue: 1, zoneStart, zoneEnd: zoneStart, tick };
+  const elapsed = clamp(elapsedMs / targetMs);
+  if (elapsed <= zoneStart) return { done: false, blue: elapsed, zoneStart, zoneEnd: zoneStart, tick };
+  return { done: false, blue: zoneStart, zoneStart, zoneEnd: elapsed, tick };
+}
+
 function renderRing(elapsedMs, hours) {
-  const targetMs = hours * HOUR_MS;
-  const fraction = Math.min(Math.max(elapsedMs / targetMs, 0), 1);
-  ringProgress.style.strokeDashoffset = CIRCUMFERENCE * (1 - fraction);
-  ringProgress.classList.toggle('done', elapsedMs >= targetMs);
+  const segments = ringSegments(elapsedMs, hours);
+  const hasZone = segments.zoneEnd > segments.zoneStart;
+
+  ringProgress.style.strokeDashoffset = CIRCUMFERENCE * (1 - segments.blue);
+  ringProgress.classList.toggle('done', segments.done);
+  // While orange shows, the blue arc ends flat exactly on the boundary and the start cap keeps its rounded start.
+  ringProgress.classList.toggle('has-zone', hasZone);
+  ringStartCap.style.visibility = hasZone ? 'visible' : 'hidden';
+
+  ringZone.style.visibility = hasZone ? 'visible' : 'hidden';
+  ringZone.style.strokeDasharray = `${(segments.zoneEnd - segments.zoneStart) * CIRCUMFERENCE} ${CIRCUMFERENCE}`;
+  ringZone.style.strokeDashoffset = -segments.zoneStart * CIRCUMFERENCE;
+
+  ringTick.style.visibility = segments.tick === null ? 'hidden' : 'visible';
+  if (segments.tick !== null) {
+    const angle = segments.tick * 2 * Math.PI;
+    const reach = 7 + 4; // half the ring's thickness, plus a little beyond it on each side
+    ringTick.setAttribute('x1', RING_CENTRE + (RING_RADIUS - reach) * Math.cos(angle));
+    ringTick.setAttribute('y1', RING_CENTRE + (RING_RADIUS - reach) * Math.sin(angle));
+    ringTick.setAttribute('x2', RING_CENTRE + (RING_RADIUS + reach) * Math.cos(angle));
+    ringTick.setAttribute('y2', RING_CENTRE + (RING_RADIUS + reach) * Math.sin(angle));
+  }
 }
 
 function render() {

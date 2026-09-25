@@ -20,7 +20,10 @@
         <div class="ring-wrap">
           <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
             <circle class="ring-track" cx="100" cy="100" r="88"></circle>
+            <circle class="ring-zone" id="ring-zone" cx="100" cy="100" r="88"></circle>
             <circle class="ring-progress" id="ring-progress" cx="100" cy="100" r="88"></circle>
+            <circle class="ring-start-cap" id="ring-start-cap" cx="188" cy="100" r="7"></circle>
+            <line class="ring-tick" id="ring-tick" x1="0" y1="0" x2="0" y2="0"></line>
           </svg>
           <div class="ring-center" id="ring-center">
             <button class="mood-btn" id="mood-btn" type="button">Mood</button>
@@ -103,7 +106,7 @@
 
     <footer class="footer">
       <button class="footer-alert" id="onedrive-alert" type="button" hidden></button>
-      <span class="build" id="build">build 19</span>
+      <span class="build" id="build">build 20</span>
     </footer>
 
     <nav class="tabs" aria-label="Views">
